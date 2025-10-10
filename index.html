@@ -375,7 +375,7 @@
         window.firebaseAuth = auth;
         
         console.log('🔥 Firebase initialized successfully!');
-        console.log('📱 Admin App Version: 4.0.1 (Payment Display Fix - Closed Status)');
+        console.log('📱 Admin App Version: 4.0.2 (Clearer Payment Closed Display)');
 
         // ========================================
         // 🔐 AUTHENTICATION & DEVICE REGISTRATION
@@ -779,7 +779,9 @@
                     if (sub.fullyPaidNote) {
                         paymentBadge = '<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">🟠 PAYMENT CLOSED</span>';
                         paymentDetails = `<div style="color: #f59e0b; font-size: 12px;">
-                            Paid: <strong>${totalPaid.toFixed(2)} MAD</strong> / ${totalAmount.toFixed(2)} MAD (${percentage}%)
+                            <span style="text-decoration: line-through; color: #94a3b8;">${totalAmount.toFixed(2)} MAD</span><br>
+                            <strong style="font-size: 16px; color: #f59e0b;">${totalPaid.toFixed(2)} MAD</strong> 
+                            <span style="font-size: 11px; color: #64748b;">(actual amount received)</span>
                         </div>`;
                     } else {
                         paymentBadge = '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">✅ FULLY PAID</span>';
