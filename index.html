@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#dc2626">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Admin Dashboard - Excavator Timer</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; margin-bottom: 5px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card .label {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .stat-card .subvalue {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: #475569;
+        }
+        
+        .filter-btn.active {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        
+        .submission-item {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .submission-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .worker-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .submission-date {
+            font-size: 13px;
+            color: #64748b;
+        }
+        
+        .submission-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-item .label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        .summary-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .sessions-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .session-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .session-row:last-child {
+            border-bottom: none;
+        }
+        
+        .btn-export {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .submission-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👔 Admin Dashboard</h1>
+            <p>Excavator Work Timer - Management Portal</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Submissions</div>
+                <div class="value" id="total-submissions">0</div>
+                <div class="subvalue">All time</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Hours</div>
+                <div class="value" id="total-hours">0h 0m</div>
+                <div class="subvalue">Current period</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Payment</div>
+                <div class="value" id="total-payment">0 MAD</div>
+                <div class="subvalue">Current period</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <h2>📊 Work Submissions</h2>
+                <div>
+                    <button class="btn-export" onclick="loadLocalData()" style="background: #3b82f6; margin-right: 10px;">🔄 Load Local Data</button>
+                    <button class="btn-export" onclick="exportData()">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterSubmissions('today', event)">Today</button>
+                <button class="filter-btn" onclick="filterSubmissions('week', event)">This Week</button>
+                <button class="filter-btn" onclick="filterSubmissions('month', event)">This Month</button>
+                <button class="filter-btn" onclick="filterSubmissions('all', event)">All Time</button>
+            </div>
+
+            <div id="submissions-list">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p>No submissions yet</p>
+                    <p style="font-size: 14px; margin-top: 10px;">Workers' reports will appear here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker Drafts (Live Monitoring) -->
+        <div class="card" style="border: 3px solid #3b82f6;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h2 style="color: #3b82f6;">👁️ Live Worker Sessions (Unsent)</h2>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 5px;">Real-time monitoring of worker's unsaved sessions</p>
+                </div>
+                <div id="draftsSyncIndicator" style="padding: 8px 16px; background: #dbeafe; border-radius: 8px; font-size: 12px; font-weight: 600; color: #1e40af;">
+                    <span id="draftsStatus">⏳ Waiting...</span>
+                </div>
+            </div>
+
+            <div id="drafts-list">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    <p>No active sessions</p>
+                    <p style="font-size: 14px; margin-top: 10px;">Worker's unsaved work will appear here in real-time</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Registration Screen -->
+    <div id="registrationScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); z-index: 3000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 40px; max-width: 450px; width: 90%; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🔐</div>
+            <h2 style="font-size: 24px; color: #1e293b; margin-bottom: 10px;">Admin Access</h2>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 30px; line-height: 1.6;">
+                Enter your admin registration code to access the dashboard.
+            </p>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="registrationCodeInput" placeholder="Enter admin code" 
+                    style="width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; text-align: center; text-transform: uppercase; font-family: monospace; letter-spacing: 2px;">
+            </div>
+            
+            <div id="registrationError" style="display: none; background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+            
+            <button id="registerDeviceBtn" onclick="registerDevice()" 
+                style="width: 100%; padding: 18px; border: none; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; transition: transform 0.2s;">
+                Authorize This Device
+            </button>
+            
+            <div id="registrationLoading" style="display: none; margin-top: 20px; color: #64748b; font-size: 14px;">
+                <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #e2e8f0; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span style="margin-left: 10px;">Authorizing...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="customAlertModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div id="customAlertIcon" style="text-align: center; font-size: 48px; margin-bottom: 15px;">ℹ️</div>
+            <div id="customAlertMessage" style="font-size: 16px; color: #1e293b; text-align: center; margin-bottom: 25px; line-height: 1.6; white-space: pre-wrap;"></div>
+            <button id="customAlertOkBtn" style="width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white;">OK</button>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="customConfirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div id="customConfirmIcon" style="text-align: center; font-size: 48px; margin-bottom: 15px;">❓</div>
+            <div id="customConfirmMessage" style="font-size: 16px; color: #1e293b; text-align: center; margin-bottom: 25px; line-height: 1.6; white-space: pre-wrap;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button id="customConfirmCancelBtn" style="flex: 1; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; background: white; color: #64748b;">Cancel</button>
+                <button id="customConfirmOkBtn" style="flex: 1; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global function stubs (will be replaced by module) -->
+    <script>
+        // These will be replaced by the actual implementations from the module
+        window.filterSubmissions = function() { console.log('Loading...'); };
+        window.deleteSubmission = function() { console.log('Loading...'); };
+        window.approveSubmission = function() { console.log('Loading...'); };
+        window.loadLocalData = function() { console.log('Loading...'); };
+        window.exportData = function() { console.log('Loading...'); };
+        window.registerDevice = function() { console.log('Loading...'); };
+    </script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, onValue, remove, update, get, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDR2jvmeJyD3pLoGZiRQ6CXqy86zVZeB3o",
+            authDomain: "excavator-timer.firebaseapp.com",
+            databaseURL: "https://excavator-timer-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "excavator-timer",
+            storageBucket: "excavator-timer.firebasestorage.app",
+            messagingSenderId: "983543822117",
+            appId: "1:983543822117:web:b55c1a232ef0fb96f8cccc"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+
+        // Make Firebase accessible globally
+        window.firebaseDB = database;
+        window.firebaseRef = ref;
+        window.firebaseOnValue = onValue;
+        window.firebaseRemove = remove;
+        window.firebaseUpdate = update;
+        window.firebaseGet = get;
+        window.firebaseSet = set;
+        window.firebaseAuth = auth;
+        
+        console.log('🔥 Firebase initialized successfully!');
+        console.log('📱 Admin App Version: 4.0.1 (Payment Display Fix - Closed Status)');
+
+        // ========================================
+        // 🔐 AUTHENTICATION & DEVICE REGISTRATION
+        // ========================================
+        
+        let currentUser = null;
+        let isDeviceRegistered = false;
+
+        // Check if device is registered (stored locally)
+        function checkDeviceRegistration() {
+            const deviceId = localStorage.getItem('deviceId');
+            const deviceRole = localStorage.getItem('deviceRole');
+            
+            console.log('🔍 Checking device registration:', { deviceId, deviceRole });
+            
+            if (deviceId && deviceRole) {
+                return { deviceId, deviceRole };
+            }
+            return null;
+        }
+
+        // Show/hide registration screen
+        function showRegistrationScreen() {
+            document.getElementById('registrationScreen').style.display = 'flex';
+            document.querySelector('.container').style.display = 'none';
+        }
+
+        function hideRegistrationScreen() {
+            document.getElementById('registrationScreen').style.display = 'none';
+            document.querySelector('.container').style.display = 'block';
+        }
+
+        // Register device with code
+        window.registerDevice = async function() {
+            const codeInput = document.getElementById('registrationCodeInput');
+            const code = codeInput.value.trim().toUpperCase();
+            const errorDiv = document.getElementById('registrationError');
+            const loadingDiv = document.getElementById('registrationLoading');
+            const registerBtn = document.getElementById('registerDeviceBtn');
+            
+            if (!code) {
+                errorDiv.textContent = 'Please enter an admin code';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // Show loading
+            loadingDiv.style.display = 'block';
+            registerBtn.disabled = true;
+            errorDiv.style.display = 'none';
+            
+            try {
+                // Check if code exists and is valid
+                const codeRef = ref(database, 'registrationCodes/' + code);
+                const codeSnapshot = await get(codeRef);
+                
+                if (!codeSnapshot.exists()) {
+                    throw new Error('Invalid admin code');
+                }
+                
+                const codeData = codeSnapshot.val();
+                
+                // Check if code is for admin role
+                if (codeData.type !== 'admin') {
+                    throw new Error('This code is not valid for admin access');
+                }
+                
+                // Get current user's UID (from anonymous auth)
+                if (!currentUser) {
+                    throw new Error('Authentication error. Please refresh the page.');
+                }
+                
+                const deviceId = currentUser.uid;
+                
+                // Register device in Firebase
+                const deviceRef = ref(database, 'registeredDevices/' + deviceId);
+                await set(deviceRef, {
+                    role: 'admin',
+                    registeredAt: Date.now(),
+                    lastActive: Date.now(),
+                    registrationCode: code,
+                    deviceInfo: navigator.userAgent
+                });
+                
+                // Mark code as used
+                await update(codeRef, {
+                    used: true,
+                    usedBy: deviceId,
+                    usedAt: Date.now()
+                });
+                
+                // Save to localStorage
+                localStorage.setItem('deviceId', deviceId);
+                localStorage.setItem('deviceRole', 'admin');
+                
+                console.log('✅ Admin device registered successfully!', { deviceId, role: 'admin' });
+                
+                // Hide registration screen and show app
+                hideRegistrationScreen();
+                await customAlert('✅ Admin access granted! Welcome to the dashboard.', '🎉');
+                
+                // Initialize app
+                initApp();
+                
+            } catch (error) {
+                console.error('❌ Registration error:', error);
+                errorDiv.textContent = error.message || 'Registration failed. Please try again.';
+                errorDiv.style.display = 'block';
+                loadingDiv.style.display = 'none';
+                registerBtn.disabled = false;
+            }
+        };
+
+        // Authentication state change listener
+        onAuthStateChanged(auth, async (user) => {
+            console.log('🔐 Auth state changed:', user ? 'Signed in' : 'Signed out');
+            
+            if (user) {
+                currentUser = user;
+                console.log('👤 User UID:', user.uid);
+                
+                // Check if device is registered
+                const registration = checkDeviceRegistration();
+                
+                if (registration) {
+                    // Device is registered - verify in Firebase
+                    try {
+                        const deviceRef = ref(database, 'registeredDevices/' + registration.deviceId);
+                        const deviceSnapshot = await get(deviceRef);
+                        
+                        if (deviceSnapshot.exists()) {
+                            const deviceData = deviceSnapshot.val();
+                            
+                            if (deviceData.role === 'admin') {
+                                console.log('✅ Device verified as registered admin');
+                                isDeviceRegistered = true;
+                                
+                                // Update last active
+                                await update(deviceRef, { lastActive: Date.now() });
+                                
+                                // Hide registration screen and show app
+                                hideRegistrationScreen();
+                                
+                                // Initialize app
+                                initApp();
+                            } else {
+                                console.error('❌ Device role mismatch');
+                                localStorage.clear();
+                                showRegistrationScreen();
+                            }
+                        } else {
+                            console.error('❌ Device not found in Firebase');
+                            localStorage.removeItem('deviceId');
+                            localStorage.removeItem('deviceRole');
+                            showRegistrationScreen();
+                        }
+                    } catch (error) {
+                        console.error('❌ Device verification error:', error);
+                        showRegistrationScreen();
+                    }
+                } else {
+                    // Device not registered - show registration screen
+                    console.log('⚠️ Device not registered locally');
+                    showRegistrationScreen();
+                }
+            } else {
+                // Not signed in - sign in anonymously
+                console.log('🔄 Signing in anonymously...');
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error('❌ Anonymous sign-in error:', error);
+                    await customAlert('Authentication error. Please refresh the page.', '❌');
+                }
+            }
+        });
+
+        // ========================================
+        // 🚀 MAIN APP INITIALIZATION
+        // ========================================
+        
+        function initApp() {
+            console.log('🚀 Initializing admin app...');
+            console.log('📱 Admin App Version: 4.0 (Live Worker Monitoring)');
+            console.log('🕐 Loaded at:', new Date().toLocaleString());
+            
+            // Request notification permission on load
+            if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            console.log('✅ Notification permission granted!');
+                        new Notification('🔔 Notifications Enabled', {
+                            body: 'You will receive alerts when workers submit new work sessions.',
+                            icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='24' fill='%23dc2626'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='110' fill='white' font-family='Arial, sans-serif' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E"
+                        });
+                        }
+                    });
+                }, 2000);
+            }
+            
+            // Load submissions from Firebase
+            loadSubmissions();
+            
+            // Load worker drafts (real-time monitoring)
+            loadWorkerDrafts();
+        }
+        
+        
+        // Global variables for app state
+        let currentFilter = 'today';
+        let allSubmissions = [];
+        let firebaseSubmissions = {}; // Store Firebase keys
+        let previousSubmissionCount = 0; // Track for notifications
+
+        function showNotification(submission) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const title = '🚜 New Work Submission!';
+                const options = {
+                    body: `Worker: ${submission.workerName}\n${submission.totalHours} - ${submission.totalPayment} MAD`,
+                    icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='24' fill='%23dc2626'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='110' fill='white' font-family='Arial, sans-serif' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E",
+                    badge: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ccircle cx='48' cy='48' r='48' fill='%23dc2626'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='60' fill='white' font-weight='bold'%3E!%3C/text%3E%3C/svg%3E",
+                    tag: 'new-submission',
+                    requireInteraction: true,
+                    data: { url: window.location.href }
+                };
+                
+                const notification = new Notification(title, options);
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+
+                // Play sound (optional)
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBzbF7vTTgjMGHm7A7+OZSA0PVqzn77BdGAg+ltryxnIqBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXyzn0vBSh+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXy');
+                try {
+                    audio.play().catch(e => console.log('Audio play failed:', e));
+                } catch(e) {}
+            }
+        }
+
+        // Load submissions from Firebase in REAL-TIME
+        function loadSubmissions() {
+            console.log('📡 Setting up real-time Firebase listener...');
+            const submissionsRef = window.firebaseRef(window.firebaseDB, 'submissions');
+            
+            window.firebaseOnValue(submissionsRef, (snapshot) => {
+                console.log('🔄 Firebase data updated!');
+                const previousCount = allSubmissions.length;
+                firebaseSubmissions = {};
+                allSubmissions = [];
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    Object.keys(data).forEach(key => {
+                        const submission = data[key];
+                        
+                        // FIX: Add payment fields to old submissions that don't have them
+                        if (!submission.paymentStatus) {
+                            console.log('⚠️ Old submission detected, adding payment fields:', key);
+                            submission.paymentStatus = 'unpaid';
+                            submission.totalPaid = 0;
+                            submission.payments = [];
+                        }
+                        
+                        firebaseSubmissions[key] = submission;
+                        allSubmissions.push({
+                            ...submission,
+                            firebaseKey: key
+                        });
+                    });
+                    console.log('✅ Loaded ' + allSubmissions.length + ' submissions from Firebase');
+                    
+                    // Check for new submissions and send notification
+                    if (previousCount > 0 && allSubmissions.length > previousCount) {
+                        // New submission detected!
+                        const newSubmission = allSubmissions[allSubmissions.length - 1];
+                        console.log('🔔 New submission detected!', newSubmission);
+                        showNotification(newSubmission);
+                    }
+                } else {
+                    console.log('ℹ️ No submissions in Firebase yet');
+                }
+                
+                filterSubmissions(currentFilter);
+            }, async (error) => {
+                console.error('❌ Firebase error:', error);
+                await customAlert('Could not connect to Firebase. Check internet connection.', '❌');
+            });
+        }
+
+        // Load data from worker app's localStorage (for local testing)
+        window.loadLocalData = async function() {
+            const workerData = localStorage.getItem('excavatorTimer');
+            if (!workerData) {
+                await customAlert('No worker data found! Make sure worker app has submissions.', 'ℹ️');
+                return;
+            }
+
+            const parsed = JSON.parse(workerData);
+            if (!parsed.submissions || parsed.submissions.length === 0) {
+                await customAlert('No submissions found in worker app!', 'ℹ️');
+                return;
+            }
+
+            // Copy submissions to admin storage
+            localStorage.setItem('adminSubmissions', JSON.stringify(parsed.submissions));
+            allSubmissions = parsed.submissions;
+            filterSubmissions(currentFilter);
+            await customAlert('✅ Loaded ' + parsed.submissions.length + ' submissions from worker app!', '✅');
+        }
+
+        window.filterSubmissions = function(period, clickEvent) {
+            currentFilter = period;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (clickEvent && clickEvent.target) {
+                clickEvent.target.classList.add('active');
+            } else {
+                // If no event (called programmatically), activate button based on period
+                const buttons = document.querySelectorAll('.filter-btn');
+                buttons.forEach(btn => {
+                    const btnText = btn.textContent.toLowerCase();
+                    if ((period === 'today' && btnText === 'today') ||
+                        (period === 'week' && btnText.includes('week')) ||
+                        (period === 'month' && btnText.includes('month')) ||
+                        (period === 'all' && btnText.includes('all'))) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+
+            const now = new Date();
+            let filtered = allSubmissions;
+
+            if (period === 'today') {
+                const today = now.toDateString();
+                filtered = allSubmissions.filter(s => new Date(s.date).toDateString() === today);
+            } else if (period === 'week') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                filtered = allSubmissions.filter(s => new Date(s.date) >= weekAgo);
+            } else if (period === 'month') {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                filtered = allSubmissions.filter(s => new Date(s.date) >= monthAgo);
+            }
+
+            renderSubmissions(filtered);
+            updateStats(filtered);
+        }
+
+        function renderSubmissions(submissions) {
+            const container = document.getElementById('submissions-list');
+
+            if (submissions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>No submissions for this period</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sorted = [...submissions].sort((a, b) => b.timestamp - a.timestamp);
+
+            container.innerHTML = sorted.map((sub) => {
+                const date = new Date(sub.date);
+                const dateStr = date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                const timeStr = date.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+
+                const status = sub.status || 'pending';
+                const statusBadge = status === 'approved' 
+                    ? '<span style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">✅ APPROVED</span>'
+                    : '<span style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">⏳ PENDING</span>';
+
+                const approveButton = status === 'pending' 
+                    ? `<button class="btn-export" onclick="approveSubmission('${sub.firebaseKey}')" style="background: #10b981; margin-right: 10px;">Approve</button>`
+                    : '';
+
+                // Payment status
+                const paymentStatus = sub.paymentStatus || 'unpaid';
+                const totalPaid = parseFloat(sub.totalPaid || 0);
+                const totalAmount = parseFloat(sub.totalPayment);
+                const remaining = totalAmount - totalPaid;
+                const percentage = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
+                
+                let paymentBadge, paymentDetails;
+                if (paymentStatus === 'fully_paid') {
+                    // Check if this is a "marked as fully paid" case (partial payment closed)
+                    if (sub.fullyPaidNote) {
+                        paymentBadge = '<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">🟠 PAYMENT CLOSED</span>';
+                        paymentDetails = `<div style="color: #f59e0b; font-size: 12px;">
+                            Paid: <strong>${totalPaid.toFixed(2)} MAD</strong> / ${totalAmount.toFixed(2)} MAD (${percentage}%)
+                        </div>`;
+                    } else {
+                        paymentBadge = '<span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">✅ FULLY PAID</span>';
+                        paymentDetails = `<div style="color: #065f46; font-size: 12px;">${totalAmount.toFixed(2)} MAD (100%)</div>`;
+                    }
+                } else if (paymentStatus === 'partially_paid') {
+                    paymentBadge = '<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">🟡 PARTIAL</span>';
+                    paymentDetails = `<div style="font-size: 12px;">
+                        <span style="color: #065f46;">${totalPaid.toFixed(2)} MAD</span> / 
+                        <span style="color: #64748b;">${totalAmount.toFixed(2)} MAD</span>
+                        <span style="color: #dc2626; font-weight: 600; margin-left: 8px;">(-${remaining.toFixed(2)})</span>
+                    </div>`;
+                } else {
+                    paymentBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">🔴 UNPAID</span>';
+                    paymentDetails = `<div style="color: #dc2626; font-size: 12px;">0 MAD (0%)</div>`;
+                }
+
+                const paymentsHistory = (sub.payments || []).length > 0 
+                    ? `<details style="margin-top: 8px;">
+                        <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #64748b; user-select: none; padding: 5px 0;">
+                            💰 Payment History (${(sub.payments || []).length} payments) ▼
+                        </summary>
+                        <div style="margin-top: 5px; padding: 8px; background: #f8fafc; border-radius: 6px;">
+                            ${(sub.payments || []).map(p => {
+                                const pDate = new Date(p.date);
+                                return `<div style="font-size: 11px; color: #64748b; padding: 2px 0; display: flex; justify-content: space-between;">
+                                    <span>✅ ${p.amount.toFixed(2)} MAD</span>
+                                    <span>${pDate.toLocaleDateString()} ${pDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </details>`
+                    : '';
+
+                return `
+                    <div class="submission-item">
+                        <div class="submission-header">
+                            <div>
+                                <div class="worker-name">👷 ${sub.workerName}</div>
+                                <div class="submission-date">${dateStr} at ${timeStr}</div>
+                            </div>
+                            <div>
+                                ${statusBadge}
+                                ${approveButton}
+                                <button class="btn-delete" onclick="deleteSubmission('${sub.firebaseKey}')">Delete</button>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                            <div style="font-size: 13px; color: #64748b; margin-bottom: 3px;">📍 Job Sites:</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">${sub.sessions ? [...new Set(sub.sessions.map(s => s.jobSite || s.job || 'Unknown'))].join(', ') : 'N/A'}</div>
+                            <div style="font-size: 13px; color: #64748b; margin-bottom: 3px;">👤 Client:</div>
+                            <div style="font-weight: 600; font-size: 18px; color: #2563eb;">${sub.clientName || (sub.sessions && sub.sessions[0] ? (sub.sessions[0].clientName || sub.sessions[0].job) : 'Unknown')}</div>
+                        </div>
+                        
+                        <div class="submission-summary">
+                            <div class="summary-item">
+                                <div class="label">Work Sessions</div>
+                                <div class="value">${sub.sessions ? sub.sessions.length : 0}x · ${sub.totalHours}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="label">Total Payment</div>
+                                <div class="value" style="color: #dc2626;">${sub.totalPayment} MAD</div>
+                            </div>
+                        </div>
+
+                        <div style="margin: 12px 0; padding: 10px 12px; background: ${paymentStatus === 'fully_paid' ? '#f0fdf4' : (paymentStatus === 'partially_paid' ? '#fffbeb' : '#fef2f2')}; border-radius: 8px; border-left: 4px solid ${paymentStatus === 'fully_paid' ? '#22c55e' : (paymentStatus === 'partially_paid' ? '#f59e0b' : '#ef4444')};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 13px; font-weight: 600; color: #475569;">Payment:</span>
+                                    ${paymentBadge}
+                                </div>
+                                ${paymentDetails}
+                            </div>
+                            ${sub.fullyPaidNote ? `<div style="margin-top: 8px; padding: 8px; background: #fef3c7; border-radius: 6px; border: 1px solid #fbbf24;">
+                                <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 3px;">ℹ️ Worker Note:</div>
+                                <div style="font-size: 12px; color: #b45309;">${sub.fullyPaidNote}</div>
+                            </div>` : ''}
+                            ${paymentsHistory}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return h + 'h ' + m + 'm';
+        }
+
+        // ========================================
+        // 🎨 CUSTOM MODAL SYSTEM (No URL shown!)
+        // ========================================
+        
+        // Custom Alert - replaces native alert()
+        function customAlert(message, icon = 'ℹ️') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customAlertModal');
+                const messageDiv = document.getElementById('customAlertMessage');
+                const iconDiv = document.getElementById('customAlertIcon');
+                const okBtn = document.getElementById('customAlertOkBtn');
+                
+                messageDiv.textContent = message;
+                iconDiv.textContent = icon;
+                modal.style.display = 'flex';
+                
+                const handleOk = () => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', handleOk);
+                    resolve(true);
+                };
+                
+                okBtn.addEventListener('click', handleOk);
+            });
+        }
+        
+        // Custom Confirm - replaces native confirm()
+        function customConfirm(message, icon = '⚠️') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customConfirmModal');
+                const messageDiv = document.getElementById('customConfirmMessage');
+                const iconDiv = document.getElementById('customConfirmIcon');
+                const okBtn = document.getElementById('customConfirmOkBtn');
+                const cancelBtn = document.getElementById('customConfirmCancelBtn');
+                
+                messageDiv.textContent = message;
+                iconDiv.textContent = icon;
+                modal.style.display = 'flex';
+                
+                const handleOk = () => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    resolve(true);
+                };
+                
+                const handleCancel = () => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    resolve(false);
+                };
+                
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+            });
+        }
+
+        function updateStats(submissions) {
+            document.getElementById('total-submissions').textContent = submissions.length;
+
+            if (submissions.length === 0) {
+                document.getElementById('total-hours').textContent = '0h 0m';
+                document.getElementById('total-payment').textContent = '0 MAD';
+                return;
+            }
+
+            // Calculate total hours
+            let totalSeconds = 0;
+            submissions.forEach(sub => {
+                sub.sessions.forEach(session => {
+                    totalSeconds += session.duration;
+                });
+            });
+
+            // Calculate total payment
+            const totalPayment = submissions.reduce((sum, sub) => {
+                return sum + parseFloat(sub.totalPayment);
+            }, 0);
+
+            document.getElementById('total-hours').textContent = formatDuration(totalSeconds);
+            document.getElementById('total-payment').textContent = totalPayment.toFixed(2) + ' MAD';
+        }
+
+        // ========================================
+        // 👁️ WORKER DRAFTS (LIVE MONITORING)
+        // ========================================
+        
+        let allDrafts = [];
+        
+        function loadWorkerDrafts() {
+            console.log('👁️ Setting up real-time drafts listener...');
+            const draftsRef = window.firebaseRef(window.firebaseDB, 'drafts');
+            
+            window.firebaseOnValue(draftsRef, (snapshot) => {
+                console.log('🔄 Drafts data updated!');
+                allDrafts = [];
+                
+                if (snapshot.exists()) {
+                    const draftsData = snapshot.val();
+                    
+                    // Flatten drafts from all workers
+                    Object.keys(draftsData).forEach(workerName => {
+                        const workerDrafts = draftsData[workerName];
+                        Object.keys(workerDrafts).forEach(draftKey => {
+                            const draft = workerDrafts[draftKey];
+                            allDrafts.push({
+                                ...draft,
+                                workerName: workerName,
+                                draftKey: draftKey
+                            });
+                        });
+                    });
+                    
+                    console.log(`✅ Loaded ${allDrafts.length} drafts from Firebase`);
+                    document.getElementById('draftsStatus').innerHTML = `☁️ ${allDrafts.length} Active Sessions`;
+                    document.getElementById('draftsSyncIndicator').style.background = allDrafts.length > 0 ? '#dbeafe' : '#f3f4f6';
+                    document.getElementById('draftsSyncIndicator').style.color = allDrafts.length > 0 ? '#1e40af' : '#6b7280';
+                } else {
+                    console.log('📭 No drafts found');
+                    document.getElementById('draftsStatus').innerHTML = '⏳ No Active Sessions';
+                    document.getElementById('draftsSyncIndicator').style.background = '#f3f4f6';
+                    document.getElementById('draftsSyncIndicator').style.color = '#6b7280';
+                }
+                
+                renderDrafts();
+            });
+        }
+        
+        function renderDrafts() {
+            const container = document.getElementById('drafts-list');
+            
+            if (allDrafts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        <p>No active sessions</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Worker's unsaved work will appear here in real-time</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by most recent
+            const sortedDrafts = [...allDrafts].sort((a, b) => (b.lastModified || b.timestamp || 0) - (a.lastModified || a.timestamp || 0));
+            
+            container.innerHTML = sortedDrafts.map(draft => {
+                const startDate = new Date(draft.startTime);
+                const endDate = new Date(draft.endTime);
+                const timeAgo = Math.floor((Date.now() - (draft.lastModified || draft.timestamp || Date.now())) / 1000 / 60); // minutes ago
+                const timeAgoStr = timeAgo < 1 ? 'Just now' : timeAgo < 60 ? `${timeAgo}m ago` : `${Math.floor(timeAgo/60)}h ago`;
+                
+                return `
+                    <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #3b82f6; position: relative;">
+                        <div style="position: absolute; top: 12px; right: 12px; background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                            ${draft.sent === false ? '📝 UNSENT' : '⏳ PENDING'}
+                        </div>
+                        
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;">👷 ${draft.workerName}</div>
+                        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">🕐 Updated ${timeAgoStr}</div>
+                        
+                        <div style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 3px;">📍 ${draft.jobSite || draft.job || 'Unknown'}</div>
+                            <div style="font-weight: 600; font-size: 16px; color: #2563eb;">👤 ${draft.clientName || draft.job || 'Unknown'}</div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; background: white; padding: 10px; border-radius: 8px;">
+                            <div>
+                                <div style="font-size: 11px; margin-bottom: 3px;">Start</div>
+                                <div style="font-weight: 600; color: #1e293b;">${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                            <div style="text-align: center; color: #3b82f6; font-weight: 700; font-size: 16px;">→</div>
+                            <div>
+                                <div style="font-size: 11px; margin-bottom: 3px;">End</div>
+                                <div style="font-weight: 600; color: #1e293b;">${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 11px; margin-bottom: 3px;">Payment</div>
+                                <div style="font-weight: 700; color: #dc2626; font-size: 15px;">${parseFloat(draft.payment || 0).toFixed(2)} MAD</div>
+                            </div>
+                        </div>
+                        
+                        ${draft.adjustedPrice !== undefined ? `
+                            <div style="margin-top: 8px; padding: 8px; background: #fef3c7; border-radius: 6px; font-size: 11px; color: #92400e;">
+                                ⚡ Price adjusted: ${parseFloat(draft.payment).toFixed(2)} → ${parseFloat(draft.adjustedPrice).toFixed(2)} MAD
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.deleteSubmission = async function(firebaseKey) {
+            const confirmDelete = await customConfirm('Delete this submission?', '🗑️');
+            if (!confirmDelete) return;
+            
+            try {
+                const submissionRef = window.firebaseRef(window.firebaseDB, 'submissions/' + firebaseKey);
+                await window.firebaseRemove(submissionRef);
+                console.log('✅ Deleted from Firebase');
+            } catch (error) {
+                console.error('❌ Delete error:', error);
+                await customAlert('Could not delete from Firebase', '❌');
+            }
+            // Real-time listener will automatically update the UI
+        }
+
+        window.approveSubmission = async function(firebaseKey) {
+            try {
+                const submissionRef = window.firebaseRef(window.firebaseDB, 'submissions/' + firebaseKey);
+                await window.firebaseUpdate(submissionRef, { status: 'approved' });
+                console.log('✅ Submission approved!');
+            } catch (error) {
+                console.error('❌ Approve error:', error);
+                await customAlert('Could not approve submission', '❌');
+            }
+        }
+
+        window.exportData = function() {
+            if (allSubmissions.length === 0) return;
+
+            let csv = 'Date,Worker Name,Job,Hours,Payment (MAD)\n';
+            
+            allSubmissions.forEach(sub => {
+                const date = new Date(sub.date).toLocaleDateString();
+                sub.sessions.forEach(session => {
+                    csv += `${date},${sub.workerName},${session.job},${formatDuration(session.duration)},${session.payment}\n`;
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'excavator-work-report-' + new Date().toISOString().split('T')[0] + '.csv';
+            a.click();
+        }
+
+        // Firebase provides real-time updates, no need for intervals!
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        }
+    </script>
+</body>
+</html>
