@@ -375,7 +375,7 @@
         window.firebaseAuth = auth;
         
         console.log('🔥 Firebase initialized successfully!');
-        console.log('📱 Admin App Version: 4.0.2 (Clearer Payment Closed Display)');
+        console.log('📱 Admin App Version: 4.0.3 (Fixed Blue Amount Display)');
 
         // ========================================
         // 🔐 AUTHENTICATION & DEVICE REGISTRATION
@@ -844,7 +844,14 @@
                             </div>
                             <div class="summary-item">
                                 <div class="label">Total Payment</div>
-                                <div class="value" style="color: #dc2626;">${sub.totalPayment} MAD</div>
+                                <div class="value" style="color: ${sub.fullyPaidNote ? '#f59e0b' : '#dc2626'};">
+                                    ${sub.fullyPaidNote ? 
+                                        `<div style="text-decoration: line-through; color: #94a3b8; font-size: 12px;">${sub.totalPayment} MAD</div>
+                                         <div style="font-size: 18px; font-weight: 600;">${totalPaid.toFixed(2)} MAD</div>` 
+                                        : 
+                                        `${sub.totalPayment} MAD`
+                                    }
+                                </div>
                             </div>
                         </div>
 
