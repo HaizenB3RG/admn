@@ -246,6 +246,16 @@
                 <button class="filter-btn" onclick="filterSubmissions('all', event)">All Time</button>
             </div>
 
+            <!-- Active vs Completed Tabs -->
+            <div style="display: flex; gap: 10px; margin: 20px 0;">
+                <button id="admin-tab-active" onclick="switchAdminTab('active')" style="flex: 1; padding: 12px; border: 2px solid #dc2626; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #dc2626; color: white;">
+                    📊 Active (<span id="admin-active-count">0</span>)
+                </button>
+                <button id="admin-tab-completed" onclick="switchAdminTab('completed')" style="flex: 1; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #6b7280;">
+                    ✅ Completed (<span id="admin-completed-count">0</span>)
+                </button>
+            </div>
+
             <div id="submissions-list">
                 <div class="empty-state">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +385,7 @@
         window.firebaseAuth = auth;
         
         console.log('🔥 Firebase initialized successfully!');
-        console.log('📱 Admin App Version: 4.0.3 (Fixed Blue Amount Display)');
+        console.log('📱 Admin App Version: 5.0.0 (Active/Completed tabs + Delete completed only)');
 
         // ========================================
         // 🔐 AUTHENTICATION & DEVICE REGISTRATION
@@ -588,6 +598,39 @@
         // Global variables for app state
         let currentFilter = 'today';
         let allSubmissions = [];
+        let adminTab = 'active'; // Track which tab is active (active or completed)
+        
+        // Switch between Active and Completed tabs
+        function switchAdminTab(tab) {
+            adminTab = tab;
+            
+            // Update button styles
+            const btnActive = document.getElementById('admin-tab-active');
+            const btnCompleted = document.getElementById('admin-tab-completed');
+            
+            if (tab === 'active') {
+                btnActive.style.background = '#dc2626';
+                btnActive.style.color = 'white';
+                btnActive.style.borderColor = '#dc2626';
+                
+                btnCompleted.style.background = 'white';
+                btnCompleted.style.color = '#6b7280';
+                btnCompleted.style.borderColor = '#e5e7eb';
+            } else {
+                btnCompleted.style.background = '#dc2626';
+                btnCompleted.style.color = 'white';
+                btnCompleted.style.borderColor = '#dc2626';
+                
+                btnActive.style.background = 'white';
+                btnActive.style.color = '#6b7280';
+                btnActive.style.borderColor = '#e5e7eb';
+            }
+            
+            // Re-render submissions with current filters
+            renderSubmissions(allSubmissions);
+        }
+        
+        window.switchAdminTab = switchAdminTab;
         let firebaseSubmissions = {}; // Store Firebase keys
         let previousSubmissionCount = 0; // Track for notifications
 
@@ -730,19 +773,33 @@
         function renderSubmissions(submissions) {
             const container = document.getElementById('submissions-list');
 
-            if (submissions.length === 0) {
+            // Categorize all submissions first
+            const activeSubmissions = submissions.filter(s => s.paymentStatus !== 'fully_paid');
+            const completedSubmissions = submissions.filter(s => s.paymentStatus === 'fully_paid');
+            
+            // Update tab counts
+            const activeCountEl = document.getElementById('admin-active-count');
+            const completedCountEl = document.getElementById('admin-completed-count');
+            if (activeCountEl) activeCountEl.textContent = activeSubmissions.length;
+            if (completedCountEl) completedCountEl.textContent = completedSubmissions.length;
+            
+            // Filter based on current tab
+            const filteredSubmissions = adminTab === 'active' ? activeSubmissions : completedSubmissions;
+
+            if (filteredSubmissions.length === 0) {
+                const emptyMessage = adminTab === 'active' ? 'No active submissions for this period' : 'No completed submissions for this period';
                 container.innerHTML = `
                     <div class="empty-state">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        <p>No submissions for this period</p>
+                        <p>${emptyMessage}</p>
                     </div>
                 `;
                 return;
             }
 
-            const sorted = [...submissions].sort((a, b) => b.timestamp - a.timestamp);
+            const sorted = [...filteredSubmissions].sort((a, b) => b.timestamp - a.timestamp);
 
             container.innerHTML = sorted.map((sub) => {
                 const date = new Date(sub.date);
@@ -816,6 +873,11 @@
                     </details>`
                     : '';
 
+                // Show delete button only for completed submissions
+                const deleteButton = paymentStatus === 'fully_paid' 
+                    ? `<button class="btn-delete" onclick="deleteSubmission('${sub.firebaseKey}')">🗑️ Delete</button>`
+                    : '';
+
                 return `
                     <div class="submission-item">
                         <div class="submission-header">
@@ -826,7 +888,7 @@
                             <div>
                                 ${statusBadge}
                                 ${approveButton}
-                                <button class="btn-delete" onclick="deleteSubmission('${sub.firebaseKey}')">Delete</button>
+                                ${deleteButton}
                             </div>
                         </div>
                         
