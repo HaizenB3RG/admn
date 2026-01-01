@@ -246,6 +246,26 @@
                 <button class="filter-btn" onclick="filterSubmissions('all', event)">All Time</button>
             </div>
 
+            <!-- Search Bar -->
+            <div style="margin: 20px 0; position: relative;">
+                <input 
+                    type="text" 
+                    id="admin-search" 
+                    placeholder="🔍 Search by worker or client name..." 
+                    oninput="filterAdminSubmissions()"
+                    style="width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.3s;"
+                    onfocus="this.style.borderColor='#dc2626'"
+                    onblur="this.style.borderColor='#e2e8f0'"
+                />
+                <button 
+                    id="admin-clear-search-btn"
+                    onclick="clearAdminSearch()"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; display: none; padding: 5px;"
+                    onmouseover="this.style.color='#ef4444'"
+                    onmouseout="this.style.color='#94a3b8'"
+                >✕</button>
+            </div>
+
             <!-- Active vs Completed Tabs -->
             <div style="display: flex; gap: 10px; margin: 20px 0;">
                 <button id="admin-tab-active" onclick="switchAdminTab('active')" style="flex: 1; padding: 12px; border: 2px solid #dc2626; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #dc2626; color: white;">
@@ -810,6 +830,15 @@
             await customAlert('✅ Loaded ' + parsed.submissions.length + ' submissions from worker app!', '✅');
         }
 
+        // Format date as DD/MM/YYYY
+        function formatDate(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return day + '/' + month + '/' + year;
+        }
+
         window.filterSubmissions = function(period, clickEvent) {
             currentFilter = period;
             
@@ -849,6 +878,34 @@
             updateStats(filtered);
         }
 
+        // Admin search functionality
+        function filterAdminSubmissions() {
+            const searchInput = document.getElementById('admin-search');
+            const clearBtn = document.getElementById('admin-clear-search-btn');
+            const searchTerm = searchInput.value.trim();
+            
+            // Show/hide clear button
+            if (searchTerm.length > 0) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+            
+            // Re-render with search filter
+            renderSubmissions(allSubmissions);
+        }
+        
+        function clearAdminSearch() {
+            const searchInput = document.getElementById('admin-search');
+            const clearBtn = document.getElementById('admin-clear-search-btn');
+            
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            
+            // Re-render without filter
+            renderSubmissions(allSubmissions);
+        }
+
         function renderSubmissions(submissions) {
             const container = document.getElementById('submissions-list');
 
@@ -865,33 +922,51 @@
             // Filter based on current tab
             const filteredSubmissions = adminTab === 'active' ? activeSubmissions : completedSubmissions;
 
-            if (filteredSubmissions.length === 0) {
-                const emptyMessage = adminTab === 'active' ? 'No active submissions for this period' : 'No completed submissions for this period';
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <p>${emptyMessage}</p>
-                    </div>
-                `;
+            // Apply search filter
+            const searchInput = document.getElementById('admin-search');
+            const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            let searchFiltered = filteredSubmissions;
+            if (searchTerm.length > 0) {
+                searchFiltered = filteredSubmissions.filter(s => {
+                    const workerName = s.workerName || '';
+                    const clientName = s.clientName || (s.sessions && s.sessions[0] ? (s.sessions[0].clientName || s.sessions[0].job) : '');
+                    return workerName.toLowerCase().includes(searchTerm) || clientName.toLowerCase().includes(searchTerm);
+                });
+            }
+
+            if (searchFiltered.length === 0) {
+                if (searchTerm.length > 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <p>🔍 No results found for "${searchTerm}"</p>
+                        </div>
+                    `;
+                } else {
+                    const emptyMessage = adminTab === 'active' ? 'No active submissions for this period' : 'No completed submissions for this period';
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p>${emptyMessage}</p>
+                        </div>
+                    `;
+                }
                 return;
             }
 
-            const sorted = [...filteredSubmissions].sort((a, b) => b.timestamp - a.timestamp);
+            const sorted = [...searchFiltered].sort((a, b) => b.timestamp - a.timestamp);
 
             container.innerHTML = sorted.map((sub) => {
-                const date = new Date(sub.date);
-                const dateStr = date.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-                const timeStr = date.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
+                // Submission date (when submitted)
+                const submissionDate = new Date(sub.date);
+                
+                // Work date (when work was actually done) - fallback to submission date for old submissions
+                const workDate = sub.workDate ? new Date(sub.workDate) : submissionDate;
 
                 const status = sub.status || 'pending';
                 const statusBadge = status === 'approved' 
@@ -962,7 +1037,7 @@
                         <div class="submission-header">
                             <div>
                                 <div class="worker-name">👷 ${sub.workerName}</div>
-                                <div class="submission-date">${dateStr} at ${timeStr}</div>
+                                <div class="submission-date">📅 Work: ${formatDate(workDate)} | 📤 Submitted: ${formatDate(submissionDate)} at ${submissionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                             </div>
                             <div>
                                 ${statusBadge}
