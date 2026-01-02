@@ -203,6 +203,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+                border-color: #dc2626;
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+                border-color: #ef4444;
+            }
+        }
     </style>
 </head>
 <body>
@@ -265,6 +275,12 @@
                     onmouseout="this.style.color='#94a3b8'"
                 >✕</button>
             </div>
+
+            <!-- Change Summary -->
+            <div id="change-summary" style="display: none; margin-bottom: 20px;"></div>
+
+            <!-- Unpaid Alert -->
+            <div id="admin-unpaid-alert" style="display: none; margin-bottom: 20px;"></div>
 
             <!-- Active vs Completed Tabs -->
             <div style="display: flex; gap: 10px; margin: 20px 0;">
@@ -906,8 +922,213 @@
             renderSubmissions(allSubmissions);
         }
 
+        // ========================================
+        // 💰 ADMIN UNPAID ALERT
+        // ========================================
+        
+        function renderAdminUnpaidAlert() {
+            const alertContainer = document.getElementById('admin-unpaid-alert');
+            if (!alertContainer) return;
+            
+            // Calculate unpaid totals from ALL submissions
+            let totalUnpaid = 0;
+            let submissionCount = 0;
+            
+            allSubmissions.forEach(sub => {
+                if (sub.paymentStatus !== 'fully_paid') {
+                    const totalAmount = parseFloat(sub.totalPayment);
+                    const totalPaid = parseFloat(sub.totalPaid || 0);
+                    const remaining = totalAmount - totalPaid;
+                    totalUnpaid += remaining;
+                    submissionCount++;
+                }
+            });
+            
+            // Hide alert if no unpaid submissions
+            if (submissionCount === 0 || totalUnpaid === 0) {
+                alertContainer.style.display = 'none';
+                return;
+            }
+            
+            // Determine alert level and styling
+            let icon, title, bgColor, textColor, borderColor, animation;
+            
+            if (totalUnpaid > 10000) {
+                icon = '🚨';
+                title = 'CRITICAL UNPAID AMOUNT';
+                bgColor = '#fee2e2';
+                textColor = '#991b1b';
+                borderColor = '#dc2626';
+                animation = 'pulse 2s infinite';
+            } else if (totalUnpaid > 6000) {
+                icon = '⚠️';
+                title = 'HIGH UNPAID AMOUNT';
+                bgColor = '#fed7aa';
+                textColor = '#9a3412';
+                borderColor = '#ea580c';
+                animation = 'none';
+            } else if (totalUnpaid > 2000) {
+                icon = '⚠️';
+                title = 'PENDING PAYMENTS';
+                bgColor = '#fef3c7';
+                textColor = '#92400e';
+                borderColor = '#f59e0b';
+                animation = 'none';
+            } else {
+                icon = 'ℹ️';
+                title = 'PENDING PAYMENTS';
+                bgColor = '#dbeafe';
+                textColor = '#1e40af';
+                borderColor = '#3b82f6';
+                animation = 'none';
+            }
+            
+            // Render alert
+            alertContainer.innerHTML = `
+                <div style="
+                    background: ${bgColor}; 
+                    padding: 20px; 
+                    border-radius: 12px; 
+                    border: 3px solid ${borderColor}; 
+                    text-align: center;
+                    animation: ${animation};
+                ">
+                    <div style="font-size: 18px; font-weight: 700; color: ${textColor}; margin-bottom: 10px;">
+                        ${icon} ${title}
+                    </div>
+                    <div style="font-size: 14px; color: ${textColor}; margin-bottom: 15px;">
+                        Total unpaid work:
+                    </div>
+                    <div style="font-size: 32px; font-weight: 800; color: ${textColor}; margin-bottom: 15px;">
+                        💰 ${totalUnpaid.toFixed(2)} MAD
+                    </div>
+                    <div style="font-size: 14px; color: ${textColor};">
+                        ${submissionCount} submission${submissionCount > 1 ? 's' : ''} waiting for payment
+                    </div>
+                </div>
+            `;
+            
+            alertContainer.style.display = 'block';
+        }
+
+        // ========================================
+        // 🔔 CHANGE TRACKING SYSTEM
+        // ========================================
+        
+        let lastAdminVisit = parseInt(localStorage.getItem('lastAdminVisit')) || 0;
+        let viewedChanges = JSON.parse(localStorage.getItem('viewedChanges')) || [];
+        
+        function detectChanges(submission) {
+            const changes = [];
+            
+            // 🆕 NEW submission
+            if (submission.timestamp > lastAdminVisit && !viewedChanges.includes(`new_${submission.timestamp}`)) {
+                changes.push({ type: 'new', badge: '🆕 NEW', color: '#d1fae5', textColor: '#065f46' });
+            }
+            
+            // 💰 PAYMENT added
+            if (submission.payments && submission.payments.length > 0) {
+                const lastPayment = submission.payments[submission.payments.length - 1];
+                const paymentDate = new Date(lastPayment.date).getTime();
+                if (paymentDate > lastAdminVisit && !viewedChanges.includes(`payment_${submission.timestamp}_${paymentDate}`)) {
+                    changes.push({ type: 'payment', badge: '💰 PAYMENT', color: '#dbeafe', textColor: '#1e40af' });
+                }
+            }
+            
+            // ✅ FULLY PAID
+            if (submission.paymentStatus === 'fully_paid') {
+                const lastPayment = submission.payments && submission.payments.length > 0 
+                    ? submission.payments[submission.payments.length - 1]
+                    : null;
+                const statusChangeDate = lastPayment ? new Date(lastPayment.date).getTime() : submission.timestamp;
+                if (statusChangeDate > lastAdminVisit && !viewedChanges.includes(`fully_paid_${submission.timestamp}`)) {
+                    changes.push({ type: 'fully_paid', badge: '✅ FULLY PAID', color: '#fef3c7', textColor: '#92400e' });
+                }
+            }
+            
+            // Return the highest priority change
+            if (changes.length > 0) {
+                return changes[0]; // Return first (highest priority)
+            }
+            return null;
+        }
+        
+        function markChangeAsViewed(submission, changeType) {
+            const changeId = changeType === 'new' ? `new_${submission.timestamp}` :
+                           changeType === 'payment' ? `payment_${submission.timestamp}_${new Date(submission.payments[submission.payments.length - 1].date).getTime()}` :
+                           changeType === 'fully_paid' ? `fully_paid_${submission.timestamp}` :
+                           `updated_${submission.timestamp}`;
+            
+            if (!viewedChanges.includes(changeId)) {
+                viewedChanges.push(changeId);
+                localStorage.setItem('viewedChanges', JSON.stringify(viewedChanges));
+            }
+        }
+        
+        function markAllAsSeen() {
+            lastAdminVisit = Date.now();
+            localStorage.setItem('lastAdminVisit', lastAdminVisit.toString());
+            viewedChanges = [];
+            localStorage.setItem('viewedChanges', JSON.stringify(viewedChanges));
+            renderSubmissions(allSubmissions);
+        }
+        
+        function renderChangeSummary() {
+            const summaryContainer = document.getElementById('change-summary');
+            if (!summaryContainer) return;
+            
+            let newCount = 0;
+            let paymentCount = 0;
+            let fullyPaidCount = 0;
+            
+            allSubmissions.forEach(sub => {
+                const change = detectChanges(sub);
+                if (change) {
+                    if (change.type === 'new') newCount++;
+                    else if (change.type === 'payment') paymentCount++;
+                    else if (change.type === 'fully_paid') fullyPaidCount++;
+                }
+            });
+            
+            const totalChanges = newCount + paymentCount + fullyPaidCount;
+            
+            if (totalChanges === 0) {
+                summaryContainer.style.display = 'none';
+                return;
+            }
+            
+            const lastVisitDate = lastAdminVisit > 0 ? new Date(lastAdminVisit) : null;
+            const lastVisitStr = lastVisitDate ? formatDate(lastVisitDate) + ' at ' + lastVisitDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Never';
+            
+            summaryContainer.innerHTML = `
+                <div style="background: #f0f9ff; padding: 15px 20px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 5px;">
+                                🔔 Changes Since Last Visit (${lastVisitStr})
+                            </div>
+                            <div style="font-size: 14px; color: #1e40af; display: flex; gap: 15px; flex-wrap: wrap;">
+                                ${newCount > 0 ? `<span>🆕 ${newCount} New</span>` : ''}
+                                ${paymentCount > 0 ? `<span>💰 ${paymentCount} Payment${paymentCount > 1 ? 's' : ''}</span>` : ''}
+                                ${fullyPaidCount > 0 ? `<span>✅ ${fullyPaidCount} Completed</span>` : ''}
+                            </div>
+                        </div>
+                        <button onclick="markAllAsSeen()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                            Mark All as Seen
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            summaryContainer.style.display = 'block';
+        }
+
         function renderSubmissions(submissions) {
             const container = document.getElementById('submissions-list');
+
+            // Update unpaid alert and change summary
+            renderAdminUnpaidAlert();
+            renderChangeSummary();
 
             // Categorize all submissions first
             const activeSubmissions = submissions.filter(s => s.paymentStatus !== 'fully_paid');
@@ -967,6 +1188,12 @@
                 
                 // Work date (when work was actually done) - fallback to submission date for old submissions
                 const workDate = sub.workDate ? new Date(sub.workDate) : submissionDate;
+
+                // Detect changes and get badge/highlight
+                const change = detectChanges(sub);
+                const changeBadge = change ? `<span style="background: ${change.color}; color: ${change.textColor}; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-left: 10px;">${change.badge}</span>` : '';
+                const highlightStyle = change ? `background: ${change.color}; border: 2px solid ${change.textColor};` : 'background: #f8fafc;';
+                const clickHandler = change ? ` onclick="event.stopPropagation(); markChangeAsViewed(allSubmissions.find(s => s.timestamp === ${sub.timestamp}), '${change.type}'); renderSubmissions(allSubmissions);"` : '';
 
                 const status = sub.status || 'pending';
                 const statusBadge = status === 'approved' 
@@ -1033,10 +1260,10 @@
                     : '';
 
                 return `
-                    <div class="submission-item">
+                    <div class="submission-item" style="${highlightStyle}" ${clickHandler}>
                         <div class="submission-header">
                             <div>
-                                <div class="worker-name">👷 ${sub.workerName}</div>
+                                <div class="worker-name">👷 ${sub.workerName}${changeBadge}</div>
                                 <div class="submission-date">📅 Work: ${formatDate(workDate)} | 📤 Submitted: ${formatDate(submissionDate)} at ${submissionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                             </div>
                             <div>
