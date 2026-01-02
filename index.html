@@ -1053,7 +1053,10 @@
             return null;
         }
         
-        function markChangeAsViewed(submission, changeType) {
+        window.markChangeAsViewed = function(submissionTimestamp, changeType) {
+            const submission = allSubmissions.find(s => s.timestamp === submissionTimestamp);
+            if (!submission) return;
+            
             const changeId = changeType === 'new' ? `new_${submission.timestamp}` :
                            changeType === 'payment' ? `payment_${submission.timestamp}_${new Date(submission.payments[submission.payments.length - 1].date).getTime()}` :
                            changeType === 'fully_paid' ? `fully_paid_${submission.timestamp}` :
@@ -1063,9 +1066,12 @@
                 viewedChanges.push(changeId);
                 localStorage.setItem('viewedChanges', JSON.stringify(viewedChanges));
             }
+            
+            // Re-render to update UI
+            renderSubmissions(allSubmissions);
         }
         
-        function markAllAsSeen() {
+        window.markAllAsSeen = function() {
             lastAdminVisit = Date.now();
             localStorage.setItem('lastAdminVisit', lastAdminVisit.toString());
             viewedChanges = [];
@@ -1193,7 +1199,7 @@
                 const change = detectChanges(sub);
                 const changeBadge = change ? `<span style="background: ${change.color}; color: ${change.textColor}; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-left: 10px;">${change.badge}</span>` : '';
                 const highlightStyle = change ? `background: ${change.color}; border: 2px solid ${change.textColor};` : 'background: #f8fafc;';
-                const clickHandler = change ? ` onclick="event.stopPropagation(); markChangeAsViewed(allSubmissions.find(s => s.timestamp === ${sub.timestamp}), '${change.type}'); renderSubmissions(allSubmissions);"` : '';
+                const clickHandler = change ? ` onclick="markChangeAsViewed(${sub.timestamp}, '${change.type}')"` : '';
 
                 const status = sub.status || 'pending';
                 const statusBadge = status === 'approved' 
