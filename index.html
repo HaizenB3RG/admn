@@ -251,6 +251,7 @@
 
             <div class="filters">
                 <button class="filter-btn active" onclick="filterSubmissions('today', event)">Today</button>
+                <button class="filter-btn" onclick="filterSubmissions('yesterday', event)">Yesterday</button>
                 <button class="filter-btn" onclick="filterSubmissions('week', event)">This Week</button>
                 <button class="filter-btn" onclick="filterSubmissions('month', event)">This Month</button>
                 <button class="filter-btn" onclick="filterSubmissions('all', event)">All Time</button>
@@ -868,6 +869,7 @@
                 buttons.forEach(btn => {
                     const btnText = btn.textContent.toLowerCase();
                     if ((period === 'today' && btnText === 'today') ||
+                        (period === 'yesterday' && btnText === 'yesterday') ||
                         (period === 'week' && btnText.includes('week')) ||
                         (period === 'month' && btnText.includes('month')) ||
                         (period === 'all' && btnText.includes('all'))) {
@@ -882,6 +884,10 @@
             if (period === 'today') {
                 const today = now.toDateString();
                 filtered = allSubmissions.filter(s => new Date(s.date).toDateString() === today);
+            } else if (period === 'yesterday') {
+                const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                const yesterdayStr = yesterday.toDateString();
+                filtered = allSubmissions.filter(s => new Date(s.date).toDateString() === yesterdayStr);
             } else if (period === 'week') {
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 filtered = allSubmissions.filter(s => new Date(s.date) >= weekAgo);
@@ -1173,15 +1179,15 @@
                         </div>
                     `;
                 } else {
-                    const emptyMessage = adminTab === 'active' ? 'No active submissions for this period' : 'No completed submissions for this period';
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <p>${emptyMessage}</p>
-                        </div>
-                    `;
+                const emptyMessage = adminTab === 'active' ? 'No active submissions for this period' : 'No completed submissions for this period';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>${emptyMessage}</p>
+                    </div>
+                `;
                 }
                 return;
             }
